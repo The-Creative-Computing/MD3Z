@@ -13,27 +13,17 @@
  * - Or access via: http://localhost:3000?configUrl=config/poc-dicom.js
  */
 
-// Detectar si estamos en producción (GitHub Pages) o desarrollo local
+// Detectar si estamos en producción o desarrollo local
 const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
 const isDevelopment = !isProduction;
 
-// Base path para GitHub Pages - Detecta automáticamente del pathname
-// En GitHub Pages: https://username.github.io/repo-name/
-// El pathname será /repo-name/
-const detectBasePath = () => {
-  if (isDevelopment) return '/';
-  
-  // Obtener el primer segmento del pathname
-  const pathParts = window.location.pathname.split('/').filter(Boolean);
-  return pathParts.length > 0 ? `/${pathParts[0]}` : '/';
-};
-
-const routerBasename = detectBasePath();
+// Base path - Cloudflare Pages despliega en la raíz del dominio
+const routerBasename = '/';
 
 // URLs para archivos DICOMweb embebidos
 const dicomwebBaseUrl = isDevelopment 
   ? 'http://localhost:5001/dicomweb'
-  : `${window.location.origin}${routerBasename}/dicomweb`;
+  : `${window.location.origin}/dicomweb`;
 
 window.config = {
   name: 'M3DZ DICOM Viewer',

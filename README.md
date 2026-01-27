@@ -45,11 +45,23 @@ Ver [POC-README.md](./POC-README.md) para instrucciones detalladas.
 
 ## 📦 Despliegue
 
-### GitHub Pages (Automático)
+### Cloudflare Pages (Recomendado) 🚀
 
-Este proyecto se despliega automáticamente a GitHub Pages cuando haces push a la rama `main`.
+Este proyecto se despliega automáticamente a Cloudflare Pages cuando haces push a la rama `master`.
 
-### Otros proveedores
+**Configuración:**
+1. Sigue la [guía detallada de despliegue](./CLOUDFLARE-DEPLOYMENT.md)
+2. Configura los secrets en GitHub:
+   - `CLOUDFLARE_API_TOKEN`
+   - `CLOUDFLARE_ACCOUNT_ID`
+3. Haz push y el sitio se desplegará automáticamente
+
+**Tu sitio estará disponible en:**
+```
+https://m3dz-viewer.pages.dev
+```
+
+### Build Local
 
 ```bash
 # Build de producción
@@ -58,7 +70,7 @@ yarn build:web
 # Los archivos están en: platform/app/dist/
 ```
 
-Compatible con Cloudflare Pages, Vercel, Netlify, y otros proveedores de hosting estático.
+Compatible con Vercel, Netlify, y otros proveedores de hosting estático.
 
 ## 🛠️ Tecnologías
 
