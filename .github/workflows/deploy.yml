@@ -34,9 +34,10 @@ jobs:
           APP_CONFIG: config/poc-dicom.js
 
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/pages-action@v1
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy platform/app/dist --project-name=m3dz-viewer
+          projectName: md3z
+          directory: platform/app/dist
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
