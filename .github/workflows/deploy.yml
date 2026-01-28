@@ -28,7 +28,7 @@ jobs:
         run: yarn install --frozen-lockfile
 
       - name: Build application
-        run: yarn run build:web
+        run: yarn run build
         env:
           PUBLIC_URL: /
           APP_CONFIG: config/poc-dicom.js
