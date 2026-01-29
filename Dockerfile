@@ -3,21 +3,11 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json yarn.lock ./
-COPY platform/app/package.json platform/app/
-COPY platform/ui/package.json platform/ui/
-COPY platform/core/package.json platform/core/
-COPY platform/i18n/package.json platform/i18n/
-COPY platform/cli/package.json platform/cli/
-COPY extensions/*/package.json extensions/
-COPY modes/*/package.json modes/
+# Copy ALL files first (simpler and more reliable)
+COPY . .
 
 # Install dependencies
 RUN yarn install --frozen-lockfile --network-timeout 300000
-
-# Copy source code
-COPY . .
 
 # Build the application
 ENV APP_CONFIG=config/poc-dicom.js
