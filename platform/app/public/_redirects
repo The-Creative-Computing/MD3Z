@@ -1,10 +1,22 @@
-# DICOMweb static file serving - specific routes first
+# DICOMweb static file serving - must handle query strings correctly
 
-# Studies endpoint needs index.json appended
-/dicomweb/studies  /dicomweb/studies/index.json  200!
+# Studies list
+/dicomweb/studies  /dicomweb/studies/index.json  200
 
-# All other /dicomweb/* paths - serve directly without SPA fallback
-/dicomweb/*  /dicomweb/:splat  200!
+# Series list (with query params)
+/dicomweb/studies/*/series  /dicomweb/studies/:studyUID/series/index.json  200
 
-# SPA fallback for app routes only
+# Instances list (with query params)
+/dicomweb/studies/*/series/*/instances  /dicomweb/studies/:studyUID/series/:seriesUID/instances/index.json  200
+
+# Metadata files (no extension)
+/dicomweb/studies/*/series/*/metadata  /dicomweb/studies/:studyUID/series/:seriesUID/metadata  200
+
+# Frame files (no extension)
+/dicomweb/studies/*/series/*/instances/*/frames/*  /dicomweb/studies/:studyUID/series/:seriesUID/instances/:instanceUID/frames/:frameNumber  200
+
+# All other dicomweb files
+/dicomweb/*  /dicomweb/:splat  200
+
+# SPA fallback for app routes - must be last
 /*  /index.html  200
