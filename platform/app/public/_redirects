@@ -1,0 +1,10 @@
+# DICOMweb static file serving - specific routes first
+
+# Studies endpoint needs index.json appended
+/dicomweb/studies  /dicomweb/studies/index.json  200!
+
+# All other /dicomweb/* paths - serve directly without SPA fallback
+/dicomweb/*  /dicomweb/:splat  200!
+
+# SPA fallback for app routes only
+/*  /index.html  200

@@ -1,0 +1,37 @@
+[build]
+  base = "platform/app"
+  command = "yarn install && yarn build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "18"
+  PUBLIC_URL = "/"
+  APP_CONFIG = "config/poc-dicom.js"
+
+[[headers]]
+  for = "/dicomweb/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type, Accept"
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/dicomweb/studies/*/index.json"
+  [headers.values]
+    Content-Type = "application/dicom+json"
+
+[[headers]]
+  for = "/dicomweb/studies/*/series/index.json"
+  [headers.values]
+    Content-Type = "application/dicom+json"
+
+[[headers]]
+  for = "/dicomweb/studies/*/series/*/instances/index.json"
+  [headers.values]
+    Content-Type = "application/dicom+json"
+
+[[headers]]
+  for = "/dicomweb/studies/*/series/*/metadata"
+  [headers.values]
+    Content-Type = "application/dicom+json"
