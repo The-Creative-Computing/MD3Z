@@ -1,7 +1,6 @@
 [build]
-  base = "platform/app"
-  command = "yarn install && yarn build"
-  publish = "dist"
+  command = "cd platform/app && yarn install && yarn build"
+  publish = "platform/app/dist"
 
 [build.environment]
   NODE_VERSION = "18"
