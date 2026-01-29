@@ -1,37 +1,58 @@
-# Reduces size of context and hides
-# files from Docker (can't COPY or ADD these)
+# Node modules
+node_modules
+npm-debug.log
+yarn-error.log
+.pnp
+.pnp.js
 
-# Note that typically the Docker context for various OHIF containers is the
-# directory of this file (i.e. the root of the source). As such, this is
-# the .dockerignore file for ALL Docker containers that are built. For example,
-# the Docker containers built from the recipes in ./platform/app/.recipes will
-# have this file as their .dockerignore.
+# Build outputs
+platform/app/dist
+.cache
+*.tsbuildinfo
 
-# Output
-**/dist/
-**/build/
+# Testing
+coverage
+.nyc_output
+playwright-report
+test-results
+*.spec.js
+*.test.js
 
-# Dependencies
-**/node_modules/
-
-# Root
-README.md
-Dockerfile
-dockerfile
-
-# Misc. Config
+# Git
 .git
-.DS_Store
 .gitignore
-.vscode
-.circleci
+.gitattributes
 
-# Unnecessary things to pull into container
-.circleci/
-.github/
-.netlify/
-.scripts/
-.vscode/
-coverage/
-platform/docs/
-testdata/
+# CI/CD
+.github
+.circleci
+netlify.toml
+.netlify
+
+# Documentation
+docs
+website
+*.md
+!README.md
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Railway
+railway.json
+.railwayignore
