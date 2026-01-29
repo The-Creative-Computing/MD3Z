@@ -17,13 +17,16 @@
 const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
 const isDevelopment = !isProduction;
 
-// Base path - Cloudflare Pages despliega en la raíz del dominio
-const routerBasename = '/';
+// Detectar si estamos en GitHub Pages
+const isGitHubPages = window.location.hostname.includes('github.io');
+
+// Base path - GitHub Pages usa /MD3Z/, desarrollo usa /
+const routerBasename = isGitHubPages ? '/MD3Z/' : '/';
 
 // URLs para archivos DICOMweb embebidos
-const dicomwebBaseUrl = isDevelopment 
+const dicomwebBaseUrl = isDevelopment
   ? 'http://localhost:5001/dicomweb'
-  : `${window.location.origin}/dicomweb`;
+  : `${window.location.origin}${routerBasename}dicomweb`;
 
 window.config = {
   name: 'M3DZ DICOM Viewer',
