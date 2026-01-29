@@ -4,7 +4,7 @@
  */
 
 export async function onRequest(context) {
-  const { request } = context;
+  const { request, env } = context;
   const url = new URL(request.url);
   
   // Get the path after /dicomweb/
@@ -16,32 +16,32 @@ export async function onRequest(context) {
     path = frameMatch[1] + '.mht';
   }
   
-  // Construct the full path to the file
-  const filePath = `/dicomweb/${path}`;
+  // Construct the asset path (without /dicomweb prefix since we're serving from the root)
+  const assetPath = `dicomweb/${path}`;
   
   try {
-    // Fetch the file from the static assets
-    const assetUrl = new URL(filePath, url.origin);
-    const response = await fetch(assetUrl.toString(), {
-      cf: {
-        cacheEverything: true,
-        cacheTtl: 86400, // 1 day
-      }
-    });
+    // Try to get the asset directly from Cloudflare Pages
+    const asset = await env.ASSETS.fetch(new URL(`/${assetPath}`, url.origin));
     
-    if (!response.ok) {
-      console.log('File not found:', filePath);
-      return new Response('Not found', { status: 404 });
+    if (!asset.ok) {
+      return new Response(JSON.stringify({ error: 'Not found', path: assetPath }), { 
+        status: 404,
+        headers: { 
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        }
+      });
     }
     
     // Read the response body once
-    const arrayBuffer = await response.arrayBuffer();
+    const arrayBuffer = await asset.arrayBuffer();
     
     // Set up headers
     const headers = new Headers();
     headers.set('Access-Control-Allow-Origin', '*');
     headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
     headers.set('Access-Control-Allow-Headers', 'Content-Type, Accept');
+    headers.set('Cache-Control', 'public, max-age=86400, immutable');
     
     // For .mht files, set proper Content-Type with boundary
     if (path.endsWith('.mht')) {
@@ -61,7 +61,7 @@ export async function onRequest(context) {
       headers.set('Content-Type', 'application/dicom+json');
     } else {
       // Copy original content type
-      const originalContentType = response.headers.get('Content-Type');
+      const originalContentType = asset.headers.get('Content-Type');
       if (originalContentType) {
         headers.set('Content-Type', originalContentType);
       }
@@ -75,9 +75,12 @@ export async function onRequest(context) {
     
   } catch (error) {
     console.error('Error serving file:', error);
-    return new Response(JSON.stringify({ error: error.message }), { 
+    return new Response(JSON.stringify({ error: error.message, path: assetPath }), { 
       status: 500,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      }
     });
   }
 }
