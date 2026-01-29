@@ -1,9 +1,8 @@
-# Serve dicomweb JSON index files
-/dicomweb/studies /dicomweb/studies/index.json 200
-/dicomweb/studies/* /dicomweb/studies/:splat 200
-
-# Serve all other dicomweb files directly
-/dicomweb/* /dicomweb/:splat 200
-
-# SPA fallback for app routes
-/* /index.html 200
+# SPA fallback for app routes ONLY (not /dicomweb)
+/ /index.html 200
+/viewer* /index.html 200
+/tmtv* /index.html 200
+/segmentation* /index.html 200
+/microscopy* /index.html 200
+/total-metabolic-tumor-volume* /index.html 200
+/preclinical-4d* /index.html 200
