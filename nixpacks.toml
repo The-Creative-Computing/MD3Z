@@ -1,0 +1,11 @@
+[phases.setup]
+nixPkgs = ['nodejs-18_x', 'yarn']
+
+[phases.install]
+cmds = ['yarn install --frozen-lockfile']
+
+[phases.build]
+cmds = ['yarn run build']
+
+[start]
+cmd = 'node server.mjs'

@@ -13,20 +13,18 @@
  * - Or access via: http://localhost:3000?configUrl=config/poc-dicom.js
  */
 
-// Detectar si estamos en producción o desarrollo local
-const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
-const isDevelopment = !isProduction;
-
-// Detectar si estamos en GitHub Pages
+// Detectar entorno
+const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 const isGitHubPages = window.location.hostname.includes('github.io');
+const isRailway = window.location.hostname.includes('railway.app') || window.location.hostname.includes('up.railway.app');
 
-// Base path - GitHub Pages usa /MD3Z/, desarrollo usa /
+// Base path configuración
 const routerBasename = isGitHubPages ? '/MD3Z/' : '/';
 
 // URLs para archivos DICOMweb embebidos
 const dicomwebBaseUrl = isDevelopment
   ? 'http://localhost:5001/dicomweb'
-  : `${window.location.origin}${routerBasename}dicomweb`;
+  : `${window.location.origin}/dicomweb`;
 
 window.config = {
   name: 'M3DZ DICOM Viewer',

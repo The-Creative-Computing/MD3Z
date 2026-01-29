@@ -1,0 +1,45 @@
+# Railway Ignore - Don't upload these to Railway
+
+# Development
+node_modules/.cache
+.cache
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Test
+coverage
+.nyc_output
+playwright-report
+test-results
+
+# Docs
+docs
+website
+
+# CI/CD
+.github
+.circleci
+
+# Local environment
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Netlify files (not needed for Railway)
+netlify.toml
+platform/app/public/_redirects
+platform/app/public/_headers
