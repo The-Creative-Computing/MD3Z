@@ -1,5 +1,9 @@
-# Don't redirect dicomweb files - serve them directly
+# Serve dicomweb JSON index files
+/dicomweb/studies /dicomweb/studies/index.json 200
+/dicomweb/studies/* /dicomweb/studies/:splat 200
+
+# Serve all other dicomweb files directly
 /dicomweb/* /dicomweb/:splat 200
 
-# SPA fallback for all other routes
+# SPA fallback for app routes
 /* /index.html 200
