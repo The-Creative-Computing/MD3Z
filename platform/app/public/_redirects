@@ -1,8 +1,0 @@
-# SPA fallback for app routes ONLY (not /dicomweb)
-/ /index.html 200
-/viewer* /index.html 200
-/tmtv* /index.html 200
-/segmentation* /index.html 200
-/microscopy* /index.html 200
-/total-metabolic-tumor-volume* /index.html 200
-/preclinical-4d* /index.html 200

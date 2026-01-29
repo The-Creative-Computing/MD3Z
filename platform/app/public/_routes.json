@@ -1,9 +1,13 @@
 {
   "version": 1,
   "include": [
-    "/*"
+    "/",
+    "/viewer/*",
+    "/segmentation/*",
+    "/tmtv/*",
+    "/microscopy/*",
+    "/total-metabolic-tumor-volume/*",
+    "/preclinical-4d/*"
   ],
-  "exclude": [
-    "/dicomweb/*"
-  ]
+  "exclude": []
 }
