@@ -4,7 +4,7 @@
  */
 
 export async function onRequest(context) {
-  const { request, env } = context;
+  const { request } = context;
   const url = new URL(request.url);
   
   // Get the path after /dicomweb/
@@ -30,49 +30,55 @@ export async function onRequest(context) {
     });
     
     if (!response.ok) {
+      console.log('File not found:', filePath);
       return new Response('Not found', { status: 404 });
     }
     
-    // Clone response to modify headers
-    const newResponse = new Response(response.body, response);
+    // Read the response body once
+    const arrayBuffer = await response.arrayBuffer();
     
-    // Set CORS headers
-    newResponse.headers.set('Access-Control-Allow-Origin', '*');
-    newResponse.headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    newResponse.headers.set('Access-Control-Allow-Headers', 'Content-Type, Accept');
+    // Set up headers
+    const headers = new Headers();
+    headers.set('Access-Control-Allow-Origin', '*');
+    headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    headers.set('Access-Control-Allow-Headers', 'Content-Type, Accept');
     
     // For .mht files, set proper Content-Type with boundary
     if (path.endsWith('.mht')) {
       // Read first 200 bytes to extract boundary
-      const arrayBuffer = await response.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
       const header = new TextDecoder().decode(uint8Array.slice(0, 200));
       
       const boundaryMatch = header.match(/--BOUNDARY_([a-f0-9-]+)/);
       if (boundaryMatch) {
         const boundary = 'BOUNDARY_' + boundaryMatch[1];
-        newResponse.headers.set('Content-Type', `multipart/related; type="image/jls"; boundary="${boundary}"`);
+        headers.set('Content-Type', `multipart/related; type="image/jls"; boundary="${boundary}"`);
       } else {
-        newResponse.headers.set('Content-Type', 'multipart/related');
+        headers.set('Content-Type', 'multipart/related');
       }
-      
-      // Return response with the original body (we already read it)
-      return new Response(arrayBuffer, {
-        status: newResponse.status,
-        headers: newResponse.headers
-      });
+    } else if (path.endsWith('.json')) {
+      // For JSON files
+      headers.set('Content-Type', 'application/dicom+json');
+    } else {
+      // Copy original content type
+      const originalContentType = response.headers.get('Content-Type');
+      if (originalContentType) {
+        headers.set('Content-Type', originalContentType);
+      }
     }
     
-    // For JSON files
-    if (path.endsWith('.json')) {
-      newResponse.headers.set('Content-Type', 'application/dicom+json');
-    }
-    
-    return newResponse;
+    // Return response with the body
+    return new Response(arrayBuffer, {
+      status: 200,
+      headers: headers
+    });
     
   } catch (error) {
     console.error('Error serving file:', error);
-    return new Response('Internal Server Error', { status: 500 });
+    return new Response(JSON.stringify({ error: error.message }), { 
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 }
 
