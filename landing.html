@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M3DZ - Portal Médico 3D</title>
+    <style>
+        :root {
+            --primary: #5ce6ac;
+            --primary-hover: #4dd679;
+            --bg-dark: #0a1f1a;
+            --bg-card: rgba(255, 255, 255, 0.05);
+            --text-main: #ffffff;
+            --text-muted: #9ca3af;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, #1a3a2e 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-main);
+            overflow: hidden;
+        }
+
+        .container {
+            max-width: 1000px;
+            width: 90%;
+            text-align: center;
+            z-index: 1;
+        }
+
+        .logo {
+            font-size: 64px;
+            font-weight: 900;
+            color: var(--primary);
+            letter-spacing: 8px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 30px rgba(92, 230, 172, 0.3);
+        }
+
+        .tagline {
+            font-size: 20px;
+            color: var(--text-muted);
+            margin-bottom: 60px;
+            font-weight: 300;
+            letter-spacing: 2px;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .option-card {
+            background: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 40px;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .option-card:hover {
+            transform: translateY(-15px);
+            background: rgba(92, 230, 172, 0.08);
+            border-color: var(--primary);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+        }
+
+        .option-icon {
+            font-size: 80px;
+            margin-bottom: 25px;
+            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.2));
+        }
+
+        .option-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: var(--text-main);
+        }
+
+        .option-desc {
+            font-size: 16px;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        .badge {
+            background: var(--primary);
+            color: var(--bg-dark);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 800;
+            margin-top: 15px;
+            text-transform: uppercase;
+        }
+
+        /* Background elements */
+        .bg-blob {
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(92, 230, 172, 0.1) 0%, rgba(92, 230, 172, 0) 70%);
+            border-radius: 50%;
+            z-index: 0;
+            filter: blur(50px);
+        }
+
+        .blob-1 { top: -100px; left: -100px; }
+        .blob-2 { bottom: -100px; right: -100px; }
+
+        @media (max-width: 600px) {
+            .logo { font-size: 48px; }
+            .options-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-blob blob-1"></div>
+    <div class="bg-blob blob-2"></div>
+
+    <div class="container">
+        <div class="logo">M3DZ</div>
+        <p class="tagline">TECNOLOGÍA MÉDICA 3D AVANZADA</p>
+
+        <div class="options-grid">
+            <!-- Opción DICOM -->
+            <a href="/" class="option-card">
+                <div class="option-icon">🩺</div>
+                <h2 class="option-title">Visor DICOM</h2>
+                <p class="option-desc">Visualización profesional de estudios radiológicos (CT, MRI, RX) con herramientas de medición y reconstrucción 3D.</p>
+                <div class="badge">Radiología</div>
+            </a>
+
+            <!-- Opción Modelos 3D -->
+            <a href="http://localhost:5173" class="option-card">
+                <div class="option-icon">🦷</div>
+                <h2 class="option-title">Modelos 3D</h2>
+                <p class="option-desc">Visor avanzado de modelos dentales, implantes y guías quirúrgicas en formatos STL y PLY.</p>
+                <div class="badge">Odontología / Cirugía</div>
+            </a>
+        </div>
+
+        <p style="color: var(--text-muted); font-size: 14px; margin-top: 20px; opacity: 0.5;">
+            &copy; 2026 M3DZ DICOM Viewer. Todos los derechos reservados.
+        </p>
+    </div>
+</body>
+</html>
