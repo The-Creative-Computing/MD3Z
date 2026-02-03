@@ -21,12 +21,15 @@
   /* Prevents the entire page from getting larger
      when the magnify tool is near the sides/corners of the page */
   overflow: hidden;
-  
+
   /* Prevent text selection on the viewport element */
   user-select: none;
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
+
+  /* Enable touch gestures for mobile */
+  touch-action: pan-x pan-y pinch-zoom;
 }
 
 /* Prevent text selection on overlay elements */

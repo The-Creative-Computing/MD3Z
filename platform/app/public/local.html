@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M3DZ - Cargar DICOM Local</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #0a1f1a 0%, #1a3a2e 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 48px;
+            font-weight: bold;
+            color: #5ce6ac;
+            letter-spacing: 4px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            color: #ffffff;
+        }
+
+        .subtitle {
+            font-size: 18px;
+            color: #9ca3af;
+            margin-bottom: 40px;
+        }
+
+        .drop-zone {
+            border: 3px dashed #5ce6ac;
+            border-radius: 20px;
+            padding: 60px 40px;
+            background: rgba(92, 230, 172, 0.05);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .drop-zone:hover,
+        .drop-zone.drag-over {
+            background: rgba(92, 230, 172, 0.1);
+            border-color: #4dd679;
+            transform: translateY(-2px);
+        }
+
+        .drop-zone-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.8;
+        }
+
+        .drop-zone-text {
+            font-size: 24px;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+
+        .drop-zone-hint {
+            font-size: 16px;
+            color: #9ca3af;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .button {
+            display: inline-block;
+            margin-top: 30px;
+            padding: 15px 40px;
+            background: #5ce6ac;
+            color: #0a1f1a;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .button:hover {
+            background: #4dd679;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(92, 230, 172, 0.3);
+        }
+
+        .info-box {
+            margin-top: 40px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            text-align: left;
+        }
+
+        .info-box h3 {
+            color: #5ce6ac;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .info-box ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .info-box li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+            color: #d1d5db;
+        }
+
+        .info-box li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #5ce6ac;
+            font-weight: bold;
+        }
+
+        .loading {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(92, 230, 172, 0.2);
+            border-top-color: #5ce6ac;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .progress-text {
+            margin-top: 15px;
+            font-size: 16px;
+            color: #9ca3af;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #5ce6ac;
+            text-decoration: none;
+            font-size: 16px;
+            transition: color 0.3s ease;
+        }
+
+        .back-link:hover {
+            color: #4dd679;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">M3DZ</div>
+        <h1>Cargar Archivos DICOM</h1>
+        <p class="subtitle">Arrastra tus archivos DICOM o haz clic para seleccionar</p>
+
+        <div class="drop-zone" id="dropZone">
+            <div class="drop-zone-icon">📁</div>
+            <div class="drop-zone-text">Arrastra archivos aquí</div>
+            <div class="drop-zone-hint">O haz clic para seleccionar archivos (.dcm, .DCM)</div>
+        </div>
+
+        <input type="file" id="fileInput" class="file-input" multiple accept=".dcm,.DCM,application/dicom">
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <div class="progress-text" id="progressText">Cargando archivos DICOM...</div>
+        </div>
+
+        <div class="info-box">
+            <h3>📋 Instrucciones:</h3>
+            <ul>
+                <li>Selecciona múltiples archivos DICOM (.dcm)</li>
+                <li>Los archivos se procesan localmente en tu navegador</li>
+                <li>No se suben a ningún servidor externo</li>
+                <li>Compatible con CT, MRI, RX, y otros tipos DICOM</li>
+            </ul>
+        </div>
+
+        <a href="/" class="back-link">← Volver a la lista de estudios</a>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const loading = document.getElementById('loading');
+        const progressText = document.getElementById('progressText');
+
+        // Click to select files
+        dropZone.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // Drag and drop events
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        function handleFiles(files) {
+            if (files.length === 0) return;
+
+            loading.classList.add('active');
+            progressText.textContent = `Cargando ${files.length} archivos DICOM...`;
+
+            // Store files in browser storage and redirect to viewer
+            const fileList = Array.from(files);
+
+            // Redirect to OHIF viewer with local data source
+            const params = new URLSearchParams({
+                datasources: 'dicomlocal'
+            });
+
+            // Store files in IndexedDB or sessionStorage for OHIF to access
+            // For now, we'll redirect and let OHIF's drag & drop handle it
+            setTimeout(() => {
+                window.location.href = `/?${params.toString()}`;
+            }, 1000);
+        }
+
+        // Show loading animation on page load if redirected
+        if (window.location.search.includes('loading')) {
+            loading.classList.add('active');
+        }
+    </script>
+</body>
+</html>

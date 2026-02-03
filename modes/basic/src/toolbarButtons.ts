@@ -703,6 +703,7 @@ const toolbarButtons: Button[] = [
   //     evaluate: 'evaluate.action',
   //   },
   // },
+  // STL Viewer panel is in the right sidebar by default
 ];
 
 export default toolbarButtons;

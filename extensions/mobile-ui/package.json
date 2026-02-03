@@ -1,0 +1,32 @@
+{
+  "name": "@ohif/extension-mobile-ui",
+  "version": "3.0.0",
+  "description": "Mobile UI components for OHIF Viewer",
+  "author": "OHIF",
+  "license": "MIT",
+  "main": "dist/ohif-extension-mobile-ui.umd.js",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": "OHIF/Viewers",
+  "keywords": [
+    "ohif-extension"
+  ],
+  "module": "src/index.tsx",
+  "engines": {
+    "node": ">=14",
+    "npm": ">=6",
+    "yarn": ">=1.16.0"
+  },
+  "peerDependencies": {
+    "@ohif/core": "^3.0.0",
+    "@ohif/ui": "^3.0.0",
+    "@ohif/ui-next": "^3.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
+}

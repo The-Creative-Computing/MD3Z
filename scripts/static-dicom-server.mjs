@@ -25,7 +25,7 @@ const MIME_TYPES = {
   '.json': 'application/dicom+json',
   '.gz': 'application/dicom+json',
   '.dcm': 'application/dicom',
-  '.mht': 'multipart/related',
+  '.mht': 'multipart/related; type="application/dicom"',
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
   '.png': 'image/png',
@@ -40,36 +40,52 @@ function getContentType(filePath) {
 }
 
 function serveFile(res, filePath, acceptGzip = false) {
-  // Try gzipped version first if client accepts it
-  const gzPath = filePath + '.gz';
-  
-  if (acceptGzip && fs.existsSync(gzPath)) {
-    const content = fs.readFileSync(gzPath);
-    res.setHeader('Content-Encoding', 'gzip');
-    res.setHeader('Content-Type', getContentType(filePath));
-    res.end(content);
-    return true;
-  }
-  
-  if (fs.existsSync(filePath)) {
-    const content = fs.readFileSync(filePath);
-    let contentType = getContentType(filePath);
-    
-    // For .mht files (multipart), extract and include boundary in Content-Type
-    if (path.extname(filePath).toLowerCase() === '.mht') {
-      const contentStr = content.toString('utf-8', 0, 200); // Read first 200 bytes
-      const boundaryMatch = contentStr.match(/--BOUNDARY_([a-f0-9-]+)/);
-      if (boundaryMatch) {
-        const boundary = 'BOUNDARY_' + boundaryMatch[1];
-        contentType = `multipart/related; type="image/jls"; boundary="${boundary}"`;
+  try {
+    // Try gzipped version first if client accepts it
+    const gzPath = filePath + '.gz';
+
+    if (acceptGzip && fs.existsSync(gzPath)) {
+      const stats = fs.statSync(gzPath);
+      if (stats.isFile()) {
+        const content = fs.readFileSync(gzPath);
+        res.setHeader('Content-Encoding', 'gzip');
+        res.setHeader('Content-Type', getContentType(filePath));
+        res.setHeader('Content-Length', content.length);
+        res.writeHead(200);
+        res.end(content);
+        console.log(`  ✓ Served ${gzPath} (${content.length} bytes)`);
+        return true;
       }
     }
-    
-    res.setHeader('Content-Type', contentType);
-    res.end(content);
-    return true;
+
+    // Try regular file
+    if (fs.existsSync(filePath)) {
+      const stats = fs.statSync(filePath);
+      if (stats.isFile()) {
+        const content = fs.readFileSync(filePath);
+        let contentType = getContentType(filePath);
+
+        // For .mht files (multipart), extract and include boundary in Content-Type
+        if (path.extname(filePath).toLowerCase() === '.mht') {
+          const contentStr = content.toString('utf-8', 0, 200); // Read first 200 bytes
+          const boundaryMatch = contentStr.match(/--BOUNDARY_([a-f0-9-]+)/);
+          if (boundaryMatch) {
+            const boundary = 'BOUNDARY_' + boundaryMatch[1];
+            contentType = `multipart/related; type="image/jls"; boundary="${boundary}"`;
+          }
+        }
+
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Content-Length', content.length);
+        res.writeHead(200);
+        res.end(content);
+        console.log(`  ✓ Served ${filePath} (${content.length} bytes)`);
+        return true;
+      }
+    }
+  } catch (err) {
+    console.error(`  ✗ Error serving ${filePath}:`, err.message);
   }
-  
   return false;
 }
 
@@ -89,11 +105,11 @@ const server = http.createServer((req, res) => {
   let urlPath = req.url.split('?')[0];
 
   console.log(`[${new Date().toISOString()}] ${req.method} ${urlPath}`);
+  console.log(`  -> Accept-Encoding: ${req.headers['accept-encoding'] || 'none'}, acceptGzip: ${acceptGzip}`);
 
   // Handle DICOMweb routes
   // QIDO-RS: /studies -> /studies/index.json
   if (urlPath === '/studies' || urlPath === '/dicomweb/studies') {
-    const basePath = urlPath.startsWith('/dicomweb') ? '' : '';
     const studiesIndexPath = path.join(DICOM_DIR, 'studies', 'index.json');
 
     if (serveFile(res, studiesIndexPath, acceptGzip)) {
@@ -119,15 +135,11 @@ const server = http.createServer((req, res) => {
   if (instancesMatch) {
     const studyUID = instancesMatch[2];
     const seriesUID = instancesMatch[3];
-    const instancesIndexPath = path.join(
-      DICOM_DIR,
-      'studies',
-      studyUID,
-      'series',
-      seriesUID,
-      'instances',
-      'index.json'
-    );
+    const instancesIndexPath = path.join(DICOM_DIR, 'studies', studyUID, 'series', seriesUID, 'instances', 'index.json');
+
+    console.log(`  -> Looking for: ${instancesIndexPath}`);
+    console.log(`  -> File exists: ${fs.existsSync(instancesIndexPath)}`);
+    console.log(`  -> .gz exists: ${fs.existsSync(instancesIndexPath + '.gz')}`);
 
     if (serveFile(res, instancesIndexPath, acceptGzip)) {
       return;
@@ -141,42 +153,34 @@ const server = http.createServer((req, res) => {
   if (metadataMatch) {
     const studyUID = metadataMatch[2];
     const seriesUID = metadataMatch[3];
-    const metadataPath = path.join(
-      DICOM_DIR,
-      'studies',
-      studyUID,
-      'series',
-      seriesUID,
-      'metadata.json'
-    );
+    const metadataPath = path.join(DICOM_DIR, 'studies', studyUID, 'series', seriesUID, 'metadata.json');
 
     if (serveFile(res, metadataPath, acceptGzip)) {
       return;
     }
   }
 
-  // WADO-RS: Serve instance frames - /studies/{studyUID}/series/{seriesUID}/instances/{instanceUID}/frames/{frameNumber}
-  const frameMatch = urlPath.match(
-    /^(\/dicomweb)?\/studies\/([^/]+)\/series\/([^/]+)\/instances\/([^/]+)\/frames\/(\d+)$/
-  );
-  if (frameMatch) {
-    const studyUID = frameMatch[2];
-    const seriesUID = frameMatch[3];
-    const instanceUID = frameMatch[4];
-    const frameNumber = frameMatch[5];
-    const framePath = path.join(
-      DICOM_DIR,
-      'studies',
-      studyUID,
-      'series',
-      seriesUID,
-      'instances',
-      instanceUID,
-      'frames',
-      `${frameNumber}.mht`
-    );
+  // WADO-RS: Serve frames (redirect to bulkdata structure)
+  const framesMatch = urlPath.match(/^(\/dicomweb)?\/studies\/([^/]+)\/series\/([^/]+)\/instances\/([^/]+)\/frames\/(\d+)$/);
+  if (framesMatch) {
+    const studyUID = framesMatch[2];
+    const seriesUID = framesMatch[3];
+    const instanceUID = framesMatch[4];
+    const frameNumber = framesMatch[5];
 
-    if (serveFile(res, framePath, acceptGzip)) {
+    // For static DICOMweb, frames are in the instances/{instanceUID}/frames directory
+    // Try with .mht extension (multipart MIME)
+    const framePath = path.join(DICOM_DIR, 'studies', studyUID, 'series', seriesUID, 'instances', instanceUID, 'frames', frameNumber + '.mht');
+
+    console.log(`  -> Looking for frame: ${framePath}`);
+
+    if (serveFile(res, framePath, false)) {
+      return;
+    }
+
+    // Also try without extension for backward compatibility
+    const framePathNoExt = path.join(DICOM_DIR, 'studies', studyUID, 'series', seriesUID, 'instances', instanceUID, 'frames', frameNumber);
+    if (serveFile(res, framePathNoExt, false)) {
       return;
     }
   }
@@ -224,18 +228,22 @@ const server = http.createServer((req, res) => {
   res.end(JSON.stringify({ error: 'Not found', path: urlPath }));
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`
-╔════════════════════════════════════════════════════════════════╗
-║         Static DICOMweb Server for OHIF Viewer                 ║
-╠════════════════════════════════════════════════════════════════╣
-║  Server running at: http://localhost:${PORT}                      ║
-║  DICOM directory:   ${DICOM_DIR.slice(0, 40)}...  ║
-╠════════════════════════════════════════════════════════════════╣
-║  Endpoints:                                                    ║
-║    GET /studies              - List all studies                ║
-║    GET /studies/{uid}/series - List series in study            ║
-║    GET /studies/{uid}/series/{uid}/instances - List instances  ║
-╚════════════════════════════════════════════════════════════════╝
-`);
+  ╔════════════════════════════════════════════════════════════════╗
+  ║         Static DICOMweb Server for OHIF Viewer                 ║
+  ╠════════════════════════════════════════════════════════════════╣
+  ║  Server running on:                                            ║
+  ║    Local:   http://localhost:${PORT}                             ║
+  ║    Network: http://192.168.1.100:${PORT}                        ║
+  ║  DICOM directory:   ${DICOM_DIR.slice(0, 40)}...  ║
+  ╠════════════════════════════════════════════════════════════════╣
+  ║  Endpoints:                                                    ║
+  ║    GET /studies              - List all studies                ║
+  ║    GET /studies/{uid}/series - List series in study            ║
+  ║    GET /studies/{uid}/series/{uid}/instances - List instances  ║
+  ╠════════════════════════════════════════════════════════════════╣
+  ║  📱 Mobile Access: Use the Network URL on your phone           ║
+  ╚════════════════════════════════════════════════════════════════╝
+  `);
 });

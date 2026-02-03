@@ -1,0 +1,95 @@
+/* Mobile Viewer Styles */
+
+/* Custom Slider for Image Navigation */
+.slider-mobile,
+.mobile-custom-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 44px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 0;
+  outline: none;
+  background: transparent !important;
+  cursor: pointer !important;
+  touch-action: pan-x !important;
+  pointer-events: auto !important;
+}
+
+.mobile-custom-slider::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 12px;
+  background: #1e3a2e;
+  border-radius: 6px;
+}
+
+.slider-mobile::-webkit-slider-thumb,
+.mobile-custom-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 44px;
+  height: 44px;
+  margin-top: -16px;
+  border-radius: 50%;
+  background: #3ba55d;
+  cursor: grab;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  border: 3px solid #fff;
+  position: relative;
+  z-index: 100;
+}
+
+.slider-mobile::-webkit-slider-thumb:active,
+.mobile-custom-slider::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  background: #4dd679;
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
+}
+
+.slider-mobile::-moz-range-track,
+.mobile-custom-slider::-moz-range-track {
+  width: 100%;
+  height: 12px;
+  background: #1e3a2e;
+  border-radius: 6px;
+  border: none;
+}
+
+.slider-mobile::-moz-range-thumb,
+.mobile-custom-slider::-moz-range-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #3ba55d;
+  cursor: grab;
+  border: 3px solid #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.slider-mobile::-moz-range-thumb:active,
+.mobile-custom-slider::-moz-range-thumb:active {
+  cursor: grabbing;
+  background: #4dd679;
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
+}
+
+/* Mobile Viewport Container */
+.mobile-viewport-container {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  background: #000;
+}
+
+/* Hide scrollbars but keep functionality */
+.mobile-viewport-container::-webkit-scrollbar {
+  display: none;
+}
+
+.mobile-viewport-container {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

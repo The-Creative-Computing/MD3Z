@@ -65,6 +65,10 @@
     {
       "packageName": "@ohif/extension-ultrasound-pleura-bline",
       "version": "3.0.0"
+    },
+    {
+      "packageName": "@ohif/extension-stl-viewer",
+      "version": "3.12.0"
     }
   ],
   "modes": [
@@ -73,6 +77,9 @@
     },
     {
       "packageName": "@ohif/mode-basic"
+    },
+    {
+      "packageName": "@ohif/mode-mobile"
     },
     {
       "packageName": "@ohif/mode-segmentation"
@@ -99,6 +106,10 @@
     {
       "packageName": "@ohif/mode-ultrasound-pleura-bline",
       "version": "3.0.0"
+    },
+    {
+      "packageName": "@ohif/mode-stl",
+      "version": "3.12.0"
     }
   ],
   "public": [

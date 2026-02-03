@@ -82,12 +82,19 @@ export const extensionDependencies = {
   '@ohif/extension-cornerstone-dicom-rt': '^3.0.0',
   '@ohif/extension-dicom-pdf': '^3.0.1',
   '@ohif/extension-dicom-video': '^3.0.1',
+  '@ohif/extension-stl-viewer': '^3.12.0',
+};
+
+export const stl = {
+  sopClassHandler: '@ohif/extension-stl-viewer.sopClassHandlerModule.stl',
+  viewport: '@ohif/extension-stl-viewer.viewportModule.stl-3d',
 };
 
 export const sopClassHandlers = [
   dicomvideo.sopClassHandler,
   dicomSeg.sopClassHandler,
   dicomPmap.sopClassHandler,
+  stl.sopClassHandler,
   ohif.sopClassHandler,
   ohif.wsiSopClassHandler,
   dicompdf.sopClassHandler,
@@ -216,6 +223,7 @@ export const toolbarSections = {
     'TrackballRotate',
     'WindowLevel',
     'Capture',
+    'UploadSTL',
     'Layout',
     'Crosshairs',
     'MoreTools',
@@ -281,9 +289,15 @@ export const basicLayout = {
   props: {
     leftPanels: [ohif.thumbnailList],
     leftPanelResizable: true,
-    rightPanels: [cornerstone.segmentation, cornerstone.measurements],
-    rightPanelClosed: true,
+    rightPanels: [
+      '@ohif/extension-stl-viewer.panelModule.stl-viewer-panel',
+      cornerstone.segmentation,
+      cornerstone.measurements,
+    ],
+    rightPanelClosed: false,
     rightPanelResizable: true,
+    rightPanelDefaultWidth: 600,
+    rightPanelDefaultOpen: '@ohif/extension-stl-viewer.panelModule.stl-viewer-panel',
     viewports: [
       {
         namespace: cornerstone.viewport,
@@ -312,6 +326,10 @@ export const basicLayout = {
       {
         namespace: dicomRT.viewport,
         displaySetsToDisplay: [dicomRT.sopClassHandler],
+      },
+      {
+        namespace: stl.viewport,
+        displaySetsToDisplay: [stl.sopClassHandler],
       },
     ],
   },

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Script para convertir archivos DICOM a formato DICOMweb estático
-# 
+#
 # USO:
 #   ./scripts/convert-dicom.sh
 #
@@ -68,7 +68,7 @@ echo -e "${YELLOW}Convirtiendo archivos DICOM a formato DICOMweb...${NC}"
 echo ""
 
 cd "$STATIC_WADO"
-node packages/static-wado-creator/bin/mkdicomweb.js "$DICOM_SOURCE" -o "$DICOM_OUTPUT"
+node packages/static-wado-creator/bin/mkdicomweb.mjs "$DICOM_SOURCE" -o "$DICOM_OUTPUT"
 
 echo ""
 echo -e "${GREEN}=== Conversión completada ===${NC}"

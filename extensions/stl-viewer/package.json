@@ -1,0 +1,27 @@
+{
+  "name": "@ohif/extension-stl-viewer",
+  "version": "3.12.0",
+  "description": "STL 3D Model Viewer Extension for OHIF",
+  "author": "M3DZ",
+  "license": "MIT",
+  "main": "dist/ohif-extension-stl-viewer.umd.js",
+  "module": "src/index.tsx",
+  "exports": {
+    ".": "./src/index.tsx"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "peerDependencies": {
+    "@ohif/core": "3.12.0-beta.127",
+    "@ohif/ui": "3.12.0-beta.127",
+    "@kitware/vtk.js": "^34.15.1",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "scripts": {
+    "dev": "echo 'Extension loaded in development mode'",
+    "build": "echo 'Extension built'"
+  }
+}

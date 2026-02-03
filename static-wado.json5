@@ -1,0 +1,13 @@
+{
+  // Configuration for mkdicomweb - DICOM to DICOMweb conversion
+  "rootDir": "dicom-source",
+  "outputDir": "platform/app/dist/dicomweb",
+  "dicomSourceGlob": "**/*.{dcm,DCM}",
+  "verbose": true,
+  "showProgress": true,
+  "recompress": ["uncompressed", "jp2", "jls"],
+  "contentType": "jls",
+  "maxInline Public": 131074,
+  "pathDeduplicated": "deduplicated",
+  "pathStudies": "studies"
+}

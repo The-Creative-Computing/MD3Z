@@ -53,7 +53,7 @@ import { Thumbnail } from './Thumbnail';
 import { ThumbnailList } from './ThumbnailList';
 import { PanelSection } from './PanelSection';
 import { DisplaySetMessageListTooltip } from './DisplaySetMessageListTooltip';
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './Tooltip';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider, SafeTooltip } from './Tooltip';
 import { ToolboxUI } from './OHIFToolbox';
 import Numeric from './Numeric';
 import { InputDialog, PresetDialog } from './OHIFDialogs';
@@ -119,6 +119,7 @@ import {
 } from './ToolButton';
 import { LayoutSelector } from './LayoutSelector';
 import { ToolSettings } from './OHIFToolSettings';
+import { URLLoader } from './URLLoader';
 export { DataRow } from './DataRow';
 export { MeasurementTable } from './MeasurementTable';
 export * from './ColorCircle';
@@ -224,6 +225,7 @@ export {
   TooltipTrigger,
   TooltipContent,
   TooltipProvider,
+  SafeTooltip,
   Toaster,
   toast,
   SegmentationTable,
@@ -269,5 +271,6 @@ export {
   ProgressLoadingBar,
   ViewportDialog,
   CinePlayer,
-  LayoutSelector
+  LayoutSelector,
+  URLLoader
 };

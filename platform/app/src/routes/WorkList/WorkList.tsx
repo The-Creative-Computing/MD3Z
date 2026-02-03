@@ -12,6 +12,8 @@ import { useAppConfig } from '@state';
 import { useDebounce, useSearchParams } from '../../hooks';
 import { utils, Types as coreTypes } from '@ohif/core';
 
+const { isMobileDevice } = utils;
+
 import {
   StudyListExpandedRow,
   EmptyStudies,
@@ -25,15 +27,14 @@ import {
 import {
   Header,
   Icons,
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
+  SafeTooltip,
   Clipboard,
   useModal,
   useSessionStorage,
   Onboarding,
   ScrollArea,
   InvestigationalUseDialog,
+  URLLoader,
 } from '@ohif/ui-next';
 
 import { Types } from '@ohif/ui';
@@ -280,17 +281,17 @@ function WorkList({
         return '';
       }
       return (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="cursor-pointer truncate">{textValue}</span>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">
+        <SafeTooltip
+          content={
             <div className="flex items-center justify-between gap-2">
               {textValue}
               <Clipboard>{textValue}</Clipboard>
             </div>
-          </TooltipContent>
-        </Tooltip>
+          }
+          side="bottom"
+        >
+          <span className="cursor-pointer truncate">{textValue}</span>
+        </SafeTooltip>
       );
     };
 
@@ -395,6 +396,13 @@ function WorkList({
                 // Hide this mode from display
                 return null;
               }
+
+              // En dispositivos móviles, solo mostrar el modo mobile
+              const isMobile = isMobileDevice();
+              if (isMobile && mode.id !== '@ohif/mode-mobile') {
+                return null;
+              }
+
               const modalitiesToCheck = modalities.replaceAll('/', '\\');
 
               const { valid: isValidMode, description: invalidModeDescription } = mode.isValidMode({
@@ -551,6 +559,61 @@ function WorkList({
     'ohif.dataSourceConfigurationComponent'
   );
 
+  // URL Loader modal props
+  const urlLoaderProps = {
+    title: 'Load DICOM from URL',
+    containerClassName: 'max-w-2xl',
+    closeButton: true,
+    content: () => (
+      <URLLoader
+        onLoadURL={(url, studyUID) => {
+          hide();
+
+          try {
+            const urlObj = new URL(url);
+
+            // Option 1: URL already contains StudyInstanceUIDs in query params
+            const existingStudyUID = urlObj.searchParams.get('StudyInstanceUIDs');
+            const finalStudyUID = studyUID || existingStudyUID;
+
+            if (finalStudyUID) {
+              // Navigate directly to viewer with the study
+              const query = new URLSearchParams();
+              query.append('StudyInstanceUIDs', finalStudyUID);
+
+              // If the URL is pointing to a different DICOMweb server,
+              // we could add it as a configUrl parameter
+              if (!url.includes('localhost')) {
+                // Extract base URL for DICOMweb endpoint
+                const baseUrl = `${urlObj.protocol}//${urlObj.host}${urlObj.pathname.replace(/\/studies.*/, '')}`;
+                query.append('configUrl', baseUrl);
+              }
+
+              preserveQueryParameters(query);
+
+              // Navigate to the first available mode
+              const firstMode = appConfig.loadedModes?.[0];
+              if (firstMode) {
+                navigate(`${firstMode.routeName}${dataPath || ''}?${query.toString()}`);
+              }
+            } else {
+              // No StudyUID provided - could redirect to a search page or show error
+              console.error('StudyInstanceUID is required to load a specific study');
+              // Optionally: you could implement a feature to list all studies from the URL
+            }
+          } catch (err) {
+            console.error('Error processing URL:', err);
+          }
+        }}
+        onClose={hide}
+      />
+    ),
+  };
+
+  const handleLoadFromURL = () => {
+    show(urlLoaderProps);
+  };
+
   return (
     <div className="flex h-screen flex-col bg-black">
       <Header
@@ -573,6 +636,7 @@ function WorkList({
               clearFilters={() => setFilterValues(defaultFilterValues)}
               isFiltering={isFiltering(filterValues, defaultFilterValues)}
               onUploadClick={uploadProps ? () => show(uploadProps) : undefined}
+              onLoadFromURLClick={handleLoadFromURL}
               getDataSourceConfigurationComponent={
                 dataSourceConfigurationComponent
                   ? () => dataSourceConfigurationComponent()

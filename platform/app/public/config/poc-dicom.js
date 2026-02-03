@@ -2,12 +2,12 @@
 
 /**
  * POC DICOM Viewer Configuration
- * 
+ *
  * This configuration enables:
  * - Local DICOM file upload (drag & drop)
  * - Remote DICOM files via URLs (DICOMweb and DICOM JSON)
  * - MPR (Multiplanar Reconstruction) view for volumetric data
- * 
+ *
  * Usage:
  * - Start server with: APP_CONFIG=config/poc-dicom.js yarn dev
  * - Or access via: http://localhost:3000?configUrl=config/poc-dicom.js
@@ -22,14 +22,19 @@ const isRailway = window.location.hostname.includes('railway.app') || window.loc
 const routerBasename = isGitHubPages ? '/MD3Z/' : '/';
 
 // URLs para archivos DICOMweb embebidos
-const dicomwebBaseUrl = isDevelopment
-  ? 'http://localhost:5001/dicomweb'
-  : `${window.location.origin}/dicomweb`;
+// Detectar si estamos accediendo desde la red local (por IP) o localhost
+const hostname = window.location.hostname;
+const isLocalNetwork = hostname.match(/^192\.168\.|^10\.|^172\.(1[6-9]|2[0-9]|3[01])\./);
+
+// Usar la misma IP/hostname que el frontend para el backend DICOMweb
+const dicomwebBaseUrl = isLocalNetwork
+  ? `http://${hostname}:5001`
+  : 'http://localhost:5001';
 
 window.config = {
   name: 'M3DZ DICOM Viewer',
   routerBasename: routerBasename,
-  
+
   // Custom branding - Replace OHIF logo with M3DZ
   whiteLabeling: {
     createLogoComponentFn: function (React) {
@@ -46,7 +51,7 @@ window.config = {
           'span',
           {
             style: {
-              color: '#5acce6',
+              color: '#5ce6ac',
               fontSize: '24px',
               fontWeight: 'bold',
               letterSpacing: '2px',
@@ -58,51 +63,56 @@ window.config = {
       );
     },
   },
-  
+
   // Extensions loaded by default (empty = all available)
   extensions: [],
-  
+
   // Modes available (empty = all available)
   modes: [],
-  
+
   // Show study list on the home page
   showStudyList: true,
-  
+
   // Web Worker configuration
   maxNumberOfWebWorkers: 4,
-  
+
   // UI Configuration
   showWarningMessageForCrossOrigin: true,
   showCPUFallbackMessage: true,
   showLoadingIndicator: true,
-  
+
   // Volume viewport strict Z spacing (important for MPR)
   strictZSpacingForVolumeViewport: true,
-  
+
+  // Disable investigational use dialog
+  investigationalUseDialog: {
+    option: 'never',
+  },
+
   // Group enabled modes first in the UI
   groupEnabledModesFirst: true,
-  
+
   // Error display mode: 'always', 'dev', or 'production'
   showErrorDetails: 'always',
-  
+
   // Request limits for performance optimization
   maxNumRequests: {
     interaction: 100,
     thumbnail: 75,
     prefetch: 25,
   },
-  
+
   // Enable DICOM upload component for local file drag & drop
   customizationService: {
     // Enable the Cornerstone DICOM upload component
     dicomUploadComponent:
       '@ohif/extension-cornerstone.customizationModule.cornerstoneDicomUploadComponent',
   },
-  
+
   // Default data source - using embedded static files
   // Options: 'embedded' (static files), 'ohif-demo' (AWS), 'dicomlocal' (drag & drop)
   defaultDataSourceName: 'embedded',
-  
+
   // Data Sources Configuration
   dataSources: [
     // ===== EMBEDDED STATIC FILES (DEFAULT) =====
@@ -134,7 +144,7 @@ window.config = {
         omitQuotationForMultipartRequest: true,
       },
     },
-    
+
     // ===== LOCAL FILE UPLOAD =====
     // Enables drag & drop of DICOM files from local file system
     {
@@ -144,7 +154,7 @@ window.config = {
         friendlyName: 'Local DICOM Files',
       },
     },
-    
+
     // ===== DICOM JSON =====
     // For loading DICOM studies defined in JSON files
     // Usage: ?StudyInstanceUIDs=...&dicomjsonurl=URL_TO_JSON
@@ -156,7 +166,7 @@ window.config = {
         name: 'json',
       },
     },
-    
+
     // ===== DICOMWEB PROXY =====
     // Allows loading from any DICOMweb server via URL parameter
     // Usage: ?StudyInstanceUIDs=...&dicomwebproxy=URL_TO_DICOMWEB_SERVER
@@ -168,9 +178,11 @@ window.config = {
         name: 'dicomwebproxy',
       },
     },
-    
+
     // ===== AWS S3 OHIF Demo Server =====
     // Public demo server with sample studies for testing
+    // COMENTADO TEMPORALMENTE - Solo usar datasource local
+    /*
     {
       namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
       sourceName: 'ohif-demo',
@@ -195,7 +207,8 @@ window.config = {
         omitQuotationForMultipartRequest: true,
       },
     },
-    
+    */
+
     // ===== LOCAL DICOMWEB SERVER =====
     // For development with a local DICOMweb server (e.g., Orthanc, DCM4CHEE)
     {
@@ -219,12 +232,12 @@ window.config = {
       },
     },
   ],
-  
+
   // HTTP Error handler
   httpErrorHandler: error => {
     console.warn('HTTP Error:', error.status, error.message);
   },
-  
+
   // Hotkeys configuration
   hotkeys: [
     {

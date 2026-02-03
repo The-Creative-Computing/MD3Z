@@ -1,0 +1,32 @@
+{
+  "name": "@ohif/mode-mobile",
+  "version": "3.12.0",
+  "description": "OHIF Mobile Mode - Simplified viewer for mobile devices",
+  "author": "OHIF",
+  "license": "MIT",
+  "main": "dist/ohif-mode-mobile.umd.js",
+  "module": "src/index.tsx",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": "OHIF/Viewers",
+  "keywords": [
+    "ohif",
+    "medical",
+    "imaging",
+    "dicom",
+    "mobile",
+    "viewer"
+  ],
+  "peerDependencies": {
+    "@ohif/core": "^3.0.0",
+    "@ohif/extension-cornerstone": "^3.0.0",
+    "@ohif/extension-default": "^3.0.0",
+    "@ohif/extension-dicom-pdf": "^3.0.1",
+    "@ohif/extension-dicom-video": "^3.0.1"
+  }
+}

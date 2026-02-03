@@ -15,6 +15,7 @@ const StudyListFilter = ({
   isFiltering,
   numOfStudies,
   onUploadClick,
+  onLoadFromURLClick,
   getDataSourceConfigurationComponent,
 }) => {
   const { t } = useTranslation('StudyList');
@@ -49,6 +50,15 @@ const StudyListFilter = ({
                   >
                     <Icons.Upload />
                     <span>{t('Upload')}</span>
+                  </div>
+                )}
+                {onLoadFromURLClick && (
+                  <div
+                    className="text-primary-active flex cursor-pointer items-center gap-2 self-center text-lg font-semibold"
+                    onClick={onLoadFromURLClick}
+                  >
+                    <Icons.Link />
+                    <span>Load from URL</span>
                   </div>
                 )}
               </div>
@@ -138,6 +148,7 @@ StudyListFilter.propTypes = {
   clearFilters: PropTypes.func.isRequired,
   isFiltering: PropTypes.bool.isRequired,
   onUploadClick: PropTypes.func,
+  onLoadFromURLClick: PropTypes.func,
   getDataSourceConfigurationComponent: PropTypes.func,
 };
 

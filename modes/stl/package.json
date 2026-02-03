@@ -1,0 +1,24 @@
+{
+  "name": "@ohif/mode-stl",
+  "version": "3.12.0",
+  "description": "STL 3D Model Viewer Mode for OHIF",
+  "author": "M3DZ",
+  "license": "MIT",
+  "main": "dist/ohif-mode-stl.umd.js",
+  "module": "src/index.tsx",
+  "exports": {
+    ".": "./src/index.tsx"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "peerDependencies": {
+    "@ohif/core": "3.12.0-beta.127",
+    "@ohif/extension-default": "3.12.0-beta.127",
+    "@ohif/extension-cornerstone": "3.12.0-beta.127",
+    "@ohif/extension-stl-viewer": "3.12.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  }
+}

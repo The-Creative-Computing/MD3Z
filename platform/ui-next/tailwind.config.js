@@ -107,12 +107,12 @@ module.exports = {
       },
       info: {
         primary: '#FFFFFF',
-        secondary: '#7BB2CE',
+        secondary: '#7BCEAA',
       },
       actions: {
-        primary: '#348CFD',
-        highlight: '#5ACCE6',
-        hover: 'rgba(52, 140, 253, 0.2)',
+        primary: '#34FD8C',
+        highlight: '#5CE6AC',
+        hover: 'rgba(52, 253, 140, 0.2)',
       },
     },
   },
