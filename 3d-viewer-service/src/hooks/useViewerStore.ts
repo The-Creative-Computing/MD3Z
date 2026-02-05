@@ -28,6 +28,24 @@ export const useViewerStore = () => {
     );
   }, []);
 
+  const updateModelPosition = useCallback((id: string, position: [number, number, number]) => {
+    setModels((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, position } : m))
+    );
+  }, []);
+
+  const updateModelRotation = useCallback((id: string, rotation: [number, number, number]) => {
+    setModels((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, rotation } : m))
+    );
+  }, []);
+
+  const updateModelScale = useCallback((id: string, scale: [number, number, number]) => {
+    setModels((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, scale } : m))
+    );
+  }, []);
+
   const addAnnotation = useCallback((annotation: Annotation) => {
     setAnnotations((prev) => [...prev, annotation]);
   }, []);
@@ -51,6 +69,9 @@ export const useViewerStore = () => {
     removeModel,
     updateModelOpacity,
     updateModelVisibility,
+    updateModelPosition,
+    updateModelRotation,
+    updateModelScale,
     addAnnotation,
     removeAnnotation,
   };

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Viewport } from './components/Viewport';
 import { useViewerStore } from './hooks/useViewerStore';
+import { useIsMobile } from './hooks/useIsMobile';
 import type { LayoutType, ModelData, Annotation } from './types';
 import {
   Grid2X2,
@@ -20,7 +21,8 @@ import {
   Clock,
   User,
   X,
-  Layers
+  Layers,
+  RefreshCw
 } from 'lucide-react';
 
 interface StudyListItem {
@@ -41,6 +43,9 @@ const App: React.FC = () => {
     removeAnnotation,
     updateModelOpacity,
     updateModelVisibility,
+    updateModelPosition,
+    updateModelRotation,
+    updateModelScale,
     addModel,
     removeModel,
     activeViewportIndex,
@@ -48,6 +53,9 @@ const App: React.FC = () => {
     focusTarget,
     setFocusTarget
   } = useViewerStore();
+
+  const [expandedModelId, setExpandedModelId] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   const [viewportModels, setViewportModels] = useState<Record<number, ModelData[]>>({});
   const [view, setView] = useState<'portal' | 'list' | 'viewer'>('portal');
@@ -57,11 +65,16 @@ const App: React.FC = () => {
   const [currentStudyId, setCurrentStudyId] = useState('');
   const [showComments, setShowComments] = useState(true);
 
+  // Mobile-specific states
+  const [showLeftPanel, setShowLeftPanel] = useState(false);
+  const [showRightPanel, setShowRightPanel] = useState(false);
+
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
-  const API_URL = 'http://localhost:3001/api';
+  // Use current hostname for API (works on both local and network access)
+  const API_URL = `http://${window.location.hostname}:3001/api`;
 
   useEffect(() => {
     if (view === 'list') {
@@ -310,6 +323,326 @@ const App: React.FC = () => {
     );
   };
 
+  // Mobile-optimized viewer
+  const renderMobileViewer = () => {
+    return (
+      <div className="flex flex-col h-screen w-screen bg-black text-white font-sans overflow-hidden relative">
+        {/* Compact Mobile Header */}
+        <header className="h-14 border-b border-gray-800 flex items-center justify-between px-3 bg-gray-900 shrink-0">
+          <button onClick={() => setView('list')} className="p-2 hover:bg-gray-800 rounded text-gray-400">
+            <ChevronLeft size={20} />
+          </button>
+          <h1 style={{ color: '#5ce6ac', fontSize: '18px', fontWeight: 'bold', letterSpacing: '1px' }}>M3DZ</h1>
+          <button 
+            onClick={() => setShowRightPanel(!showRightPanel)} 
+            className={`p-2 rounded ${showRightPanel ? 'bg-m3dz-green text-black' : 'text-gray-400'}`}
+          >
+            <MessageSquare size={20} />
+          </button>
+        </header>
+
+        {/* Main Viewport */}
+        <div className="flex-1 relative overflow-hidden">
+          {renderViewport(0)}
+          
+          {/* Floating Models Button */}
+          <button
+            onClick={() => setShowLeftPanel(!showLeftPanel)}
+            className="absolute bottom-4 left-4 z-20 bg-m3dz-green text-black p-4 rounded-full shadow-lg active:scale-95 transition-transform"
+          >
+            <Layers size={24} />
+          </button>
+
+          {/* Floating Record Video Button */}
+          <button
+            onClick={isRecording ? stopRecording : startRecording}
+            className={`absolute bottom-4 right-4 z-20 p-4 rounded-full shadow-lg active:scale-95 transition-transform ${
+              isRecording 
+                ? 'bg-red-600 text-white animate-pulse border-2 border-red-400' 
+                : 'bg-gray-800 text-white border border-gray-700'
+            }`}
+          >
+            <Video size={24} />
+          </button>
+        </div>
+
+        {/* Left Panel - Models (Drawer) */}
+        {showLeftPanel && (
+          <>
+            <div 
+              className="absolute inset-0 bg-black/50 z-30"
+              onClick={() => setShowLeftPanel(false)}
+            />
+            <aside className="absolute left-0 top-14 bottom-0 w-80 bg-gray-900 border-r border-gray-800 z-40 shadow-2xl flex flex-col animate-slide-in">
+              <div className="p-4 border-b border-gray-800 flex items-center justify-between">
+                <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">Models</h2>
+                <button onClick={() => setShowLeftPanel(false)} className="text-gray-400 p-1">
+                  <X size={20} />
+                </button>
+              </div>
+              
+              <div className="p-4 space-y-3 overflow-y-auto flex-1">
+                {models.map(model => (
+                  <div
+                    key={model.id}
+                    className="bg-gray-800 p-4 rounded-lg border border-gray-700"
+                  >
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="text-sm font-medium truncate flex-1">{model.name}</span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            const newVisible = !model.visible;
+                            updateModelVisibility(model.id, newVisible);
+                            setViewportModels(prev => {
+                              const updated = { ...prev };
+                              Object.keys(updated).forEach(key => {
+                                const idx = parseInt(key);
+                                updated[idx] = updated[idx].map(m => m.id === model.id ? { ...m, visible: newVisible } : m);
+                              });
+                              return updated;
+                            });
+                          }}
+                          className={`p-2 rounded ${model.visible ? 'text-m3dz-light' : 'text-gray-500'}`}
+                        >
+                          {model.visible ? <Eye size={18} /> : <EyeOff size={18} />}
+                        </button>
+                        <button onClick={() => removeModel(model.id)} className="text-gray-500 hover:text-red-500 p-2">
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Opacity */}
+                    <div className="mb-3">
+                      <div className="text-xs text-gray-400 mb-2">Opacity</div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value={model.opacity}
+                        onChange={(e) => {
+                          const newOpacity = parseFloat(e.target.value);
+                          updateModelOpacity(model.id, newOpacity);
+                          setViewportModels(prev => {
+                            const updated = { ...prev };
+                            Object.keys(updated).forEach(key => {
+                              const idx = parseInt(key);
+                              updated[idx] = updated[idx].map(m => m.id === model.id ? { ...m, opacity: newOpacity } : m);
+                            });
+                            return updated;
+                          });
+                        }}
+                        className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-m3dz-green"
+                      />
+                    </div>
+
+                    {/* Transform Button */}
+                    <button
+                      onClick={() => setExpandedModelId(expandedModelId === model.id ? null : model.id)}
+                      className="w-full bg-gray-700 hover:bg-gray-600 text-sm py-2 rounded flex items-center justify-center gap-2"
+                    >
+                      <Box size={16} />
+                      {expandedModelId === model.id ? 'Hide' : 'Show'} Transforms
+                    </button>
+
+                    {/* Transform Controls */}
+                    {expandedModelId === model.id && (
+                      <div className="mt-3 space-y-3 pt-3 border-t border-gray-700">
+                        {/* Position */}
+                        <div>
+                          <div className="text-xs text-m3dz-light font-bold mb-2">Position</div>
+                          {['X', 'Y', 'Z'].map((axis, idx) => (
+                            <div key={axis} className="flex items-center gap-2 mb-2">
+                              <span className="text-xs text-gray-400 w-4">{axis}</span>
+                              <input
+                                type="number"
+                                value={model.position[idx].toFixed(1)}
+                                onChange={(e) => {
+                                  const val = parseFloat(e.target.value) || 0;
+                                  const newPos = [...model.position] as [number, number, number];
+                                  newPos[idx] = Math.max(-50, Math.min(50, val));
+                                  updateModelPosition(model.id, newPos);
+                                  setViewportModels(prev => {
+                                    const updated = { ...prev };
+                                    Object.keys(updated).forEach(key => {
+                                      const vidx = parseInt(key);
+                                      updated[vidx] = updated[vidx].map(m => m.id === model.id ? { ...m, position: newPos } : m);
+                                    });
+                                    return updated;
+                                  });
+                                }}
+                                className="flex-1 text-sm text-white bg-gray-800 border border-gray-600 rounded px-3 py-2 focus:border-m3dz-green focus:outline-none"
+                              />
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Rotation */}
+                        <div>
+                          <div className="text-xs text-m3dz-light font-bold mb-2">Rotation (degrees)</div>
+                          {['X', 'Y', 'Z'].map((axis, idx) => (
+                            <div key={axis} className="flex items-center gap-2 mb-2">
+                              <span className="text-xs text-gray-400 w-4">{axis}</span>
+                              <input
+                                type="number"
+                                value={(model.rotation[idx] * 180 / Math.PI).toFixed(0)}
+                                onChange={(e) => {
+                                  const degrees = parseFloat(e.target.value) || 0;
+                                  const radians = (degrees * Math.PI) / 180;
+                                  const newRot = [...model.rotation] as [number, number, number];
+                                  newRot[idx] = Math.max(-3.14, Math.min(3.14, radians));
+                                  updateModelRotation(model.id, newRot);
+                                  setViewportModels(prev => {
+                                    const updated = { ...prev };
+                                    Object.keys(updated).forEach(key => {
+                                      const vidx = parseInt(key);
+                                      updated[vidx] = updated[vidx].map(m => m.id === model.id ? { ...m, rotation: newRot } : m);
+                                    });
+                                    return updated;
+                                  });
+                                }}
+                                className="flex-1 text-sm text-white bg-gray-800 border border-gray-600 rounded px-3 py-2 focus:border-m3dz-green focus:outline-none"
+                              />
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Scale */}
+                        <div>
+                          <div className="text-xs text-m3dz-light font-bold mb-2">Scale (Uniform)</div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-400 w-4">XYZ</span>
+                            <input
+                              type="number"
+                              value={model.scale[0].toFixed(1)}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value) || 0.1;
+                                const uniformScale = Math.max(0.1, Math.min(50, val));
+                                const newScale: [number, number, number] = [uniformScale, uniformScale, uniformScale];
+                                updateModelScale(model.id, newScale);
+                                setViewportModels(prev => {
+                                  const updated = { ...prev };
+                                  Object.keys(updated).forEach(key => {
+                                    const vidx = parseInt(key);
+                                    updated[vidx] = updated[vidx].map(m => m.id === model.id ? { ...m, scale: newScale } : m);
+                                  });
+                                  return updated;
+                                });
+                              }}
+                              className="flex-1 text-sm text-white bg-gray-800 border border-gray-600 rounded px-3 py-2 focus:border-m3dz-green focus:outline-none"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Reset */}
+                        <button
+                          onClick={() => {
+                            const defaultRotation = model.type === 'splat' ? [3.14159, 0, 0] : [0, 0, 0];
+                            updateModelPosition(model.id, [0, 0, 0]);
+                            updateModelRotation(model.id, defaultRotation);
+                            updateModelScale(model.id, model.type === 'splat' ? [10, 10, 10] : [1, 1, 1]);
+                            setViewportModels(prev => {
+                              const updated = { ...prev };
+                              Object.keys(updated).forEach(key => {
+                                const vidx = parseInt(key);
+                                updated[vidx] = updated[vidx].map(m => m.id === model.id ? { 
+                                  ...m, 
+                                  position: [0, 0, 0], 
+                                  rotation: defaultRotation, 
+                                  scale: model.type === 'splat' ? [10, 10, 10] : [1, 1, 1] 
+                                } : m);
+                              });
+                              return updated;
+                            });
+                          }}
+                          className="w-full bg-gray-700 hover:bg-gray-600 text-sm py-2 rounded"
+                        >
+                          Reset Transform
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </aside>
+          </>
+        )}
+
+        {/* Right Panel - Comments (Drawer) */}
+        {showRightPanel && (
+          <>
+            <div 
+              className="absolute inset-0 bg-black/50 z-30"
+              onClick={() => setShowRightPanel(false)}
+            />
+            <aside className="absolute right-0 top-14 bottom-0 w-80 bg-gray-900 border-l border-gray-800 z-40 shadow-2xl flex flex-col">
+              <div className="p-4 border-b border-gray-800 flex items-center justify-between">
+                <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 flex items-center gap-2">
+                  <MessageSquare size={16} /> Comments
+                </h2>
+                <button onClick={() => setShowRightPanel(false)} className="text-gray-500 hover:text-white p-1">
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto">
+                {annotations.length === 0 ? (
+                  <div className="p-8 text-center text-gray-600">
+                    <MessageSquare size={48} className="mx-auto mb-4 opacity-20" />
+                    <p className="text-sm italic">Double-tap on a model to add a comment</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-800">
+                    {annotations.sort((a, b) => b.createdAt - a.createdAt).map(ann => (
+                      <div
+                        key={ann.id}
+                        onClick={() => handleCommentClick(ann)}
+                        className="p-4 hover:bg-gray-800/50 active:bg-gray-800 transition-colors group cursor-pointer"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-m3dz-green/20 flex items-center justify-center text-xs text-m3dz-light font-bold border border-m3dz-green/30">
+                              {ann.author?.[0] || 'U'}
+                            </div>
+                            <span className="text-sm font-bold text-gray-300">{ann.author || 'User'}</span>
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveAnnotation(ann);
+                            }}
+                            className="text-gray-600 hover:text-red-500 p-1"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+
+                        <p className="text-sm text-gray-200 mb-3 leading-relaxed">
+                          {ann.text}
+                        </p>
+
+                        <div className="flex items-center justify-between text-xs text-gray-500">
+                          <span className="flex items-center gap-1">
+                            <Box size={12} /> {ann.modelName}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Clock size={12} /> {new Date(ann.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </aside>
+          </>
+        )}
+      </div>
+    );
+  };
+
   const renderLayout = () => {
     switch (layout) {
       case '1':
@@ -388,6 +721,12 @@ const App: React.FC = () => {
     );
   }
 
+  // Mobile viewer
+  if (view === 'viewer' && isMobile) {
+    return renderMobileViewer();
+  }
+
+  // Desktop viewer
   return (
     <div className="flex flex-col h-screen w-screen bg-black text-white font-sans overflow-hidden">
       {/* Top Header */}
@@ -426,78 +765,308 @@ const App: React.FC = () => {
           <div className="p-4 border-b border-gray-800">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500">Models List</h2>
-              {models.length >= 2 && (
+              <div className="flex gap-2">
                 <button
                   onClick={() => {
-                    if (models.length >= 2) {
-                      const isFirstVisible = models[0].opacity > 0.5;
-                      updateModelOpacity(models[0].id, isFirstVisible ? 0 : 1);
-                      updateModelOpacity(models[1].id, isFirstVisible ? 1 : 0);
-                    }
+                    // Toggle all models: if any are visible, hide all; if all hidden, show all
+                    const anyVisible = models.some(m => m.opacity > 0.5);
+                    const newOpacity = anyVisible ? 0 : 1;
+                    
+                    models.forEach(model => {
+                      updateModelOpacity(model.id, newOpacity);
+                    });
+                    
+                    // Update viewport models too
+                    setViewportModels(prev => {
+                      const updated = { ...prev };
+                      Object.keys(updated).forEach(key => {
+                        const idx = parseInt(key);
+                        updated[idx] = updated[idx].map(m => ({ ...m, opacity: newOpacity }));
+                      });
+                      return updated;
+                    });
                   }}
-                  className="text-[10px] bg-m3dz-green/20 text-m3dz-light px-2 py-1 rounded hover:bg-m3dz-green/30 border border-m3dz-green/30"
+                  className="text-[10px] bg-gray-800 text-gray-300 px-2 py-1 rounded hover:bg-gray-700 border border-gray-700 hover:border-m3dz-green/50"
+                  title="Toggle all models on/off"
                 >
-                  Toggle A/B
+                  Toggle All
                 </button>
-              )}
+                {models.length >= 2 && (
+                  <button
+                    onClick={() => {
+                      if (models.length >= 2) {
+                        const isFirstVisible = models[0].opacity > 0.5;
+                        updateModelOpacity(models[0].id, isFirstVisible ? 0 : 1);
+                        updateModelOpacity(models[1].id, isFirstVisible ? 1 : 0);
+                      }
+                    }}
+                    className="text-[10px] bg-m3dz-green/20 text-m3dz-light px-2 py-1 rounded hover:bg-m3dz-green/30 border border-m3dz-green/30"
+                  >
+                    Toggle A/B
+                  </button>
+                )}
+              </div>
             </div>
             <div className="space-y-3 overflow-y-auto max-h-[70vh]">
-              {models.map(model => (
-                <div
-                  key={model.id}
-                  onClick={() => {
-                    if (activeViewportIndex !== null) {
-                      handleAddModeToViewport(activeViewportIndex, model);
-                    } else {
-                      setActiveViewportIndex(0);
-                      handleAddModeToViewport(0, model);
-                    }
-                  }}
-                  className="bg-gray-800 p-3 rounded-lg border border-gray-700 hover:border-m3dz-green transition-all cursor-pointer active:scale-95"
-                >
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-xs font-medium truncate w-24">{model.name}</span>
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const newVisible = !model.visible;
-                          updateModelVisibility(model.id, newVisible);
-                          setViewportModels(prev => {
-                            const updated = { ...prev };
-                            Object.keys(updated).forEach(key => {
-                              const idx = parseInt(key);
-                              updated[idx] = updated[idx].map(m => m.id === model.id ? { ...m, visible: newVisible } : m);
+              {models.map(model => {
+                const isExpanded = expandedModelId === model.id;
+                return (
+                  <div
+                    key={model.id}
+                    className="bg-gray-800 rounded-lg border border-gray-700 hover:border-m3dz-green transition-all"
+                  >
+                    {/* Model Header */}
+                    <div
+                      onClick={() => {
+                        if (activeViewportIndex !== null) {
+                          handleAddModeToViewport(activeViewportIndex, model);
+                        } else {
+                          setActiveViewportIndex(0);
+                          handleAddModeToViewport(0, model);
+                        }
+                      }}
+                      className="p-3 cursor-pointer active:scale-95"
+                    >
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-xs font-medium truncate w-24">{model.name}</span>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setExpandedModelId(isExpanded ? null : model.id);
+                            }}
+                            className="p-1 rounded hover:bg-gray-700 text-gray-400 hover:text-m3dz-light"
+                            title="Transform controls"
+                          >
+                            <Box size={14} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const newVisible = !model.visible;
+                              updateModelVisibility(model.id, newVisible);
+                              setViewportModels(prev => {
+                                const updated = { ...prev };
+                                Object.keys(updated).forEach(key => {
+                                  const idx = parseInt(key);
+                                  updated[idx] = updated[idx].map(m => m.id === model.id ? { ...m, visible: newVisible } : m);
+                                });
+                                return updated;
+                              });
+                            }}
+                            className={`p-1 rounded hover:bg-gray-700 ${model.visible ? 'text-m3dz-light' : 'text-gray-500'}`}
+                          >
+                            {model.visible ? <Eye size={14} /> : <EyeOff size={14} />}
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); removeModel(model.id); }} className="text-gray-500 hover:text-red-500 p-1"><Trash2 size={14} /></button>
+                        </div>
+                      </div>
+                      
+                      {/* Opacity Slider */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-gray-500">Opacity</span>
+                        <input
+                          type="range" min="0" max="1" step="0.01" value={model.opacity}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => {
+                            const newOpacity = parseFloat(e.target.value);
+                            updateModelOpacity(model.id, newOpacity);
+                            setViewportModels(prev => {
+                              const updated = { ...prev };
+                              Object.keys(updated).forEach(key => {
+                                const idx = parseInt(key);
+                                updated[idx] = updated[idx].map(m => m.id === model.id ? { ...m, opacity: newOpacity } : m);
+                              });
+                              return updated;
                             });
-                            return updated;
-                          });
-                        }}
-                        className={`p-1 rounded hover:bg-gray-700 ${model.visible ? 'text-m3dz-light' : 'text-gray-500'}`}
-                      >
-                        {model.visible ? <Eye size={14} /> : <EyeOff size={14} />}
-                      </button>
-                      <button onClick={(e) => { e.stopPropagation(); removeModel(model.id); }} className="text-gray-500 hover:text-red-500 p-1"><Trash2 size={14} /></button>
+                          }}
+                          className="flex-1 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-m3dz-green"
+                        />
+                      </div>
                     </div>
+
+                    {/* Transform Controls (Expandable) */}
+                    {isExpanded && (
+                      <div className="px-3 pb-3 space-y-3 border-t border-gray-700 pt-3" onClick={(e) => e.stopPropagation()}>
+                        {/* Position */}
+                        <div>
+                          <div className="text-[10px] text-m3dz-light font-bold mb-1">Position</div>
+                          {['X', 'Y', 'Z'].map((axis, idx) => (
+                            <div key={axis} className="flex items-center gap-2 mb-1">
+                              <span className="text-[9px] text-gray-500 w-3">{axis}</span>
+                              <input
+                                type="range"
+                                min="-50"
+                                max="50"
+                                step="0.1"
+                                value={model.position[idx]}
+                                onChange={(e) => {
+                                  const newPos = [...model.position] as [number, number, number];
+                                  newPos[idx] = parseFloat(e.target.value);
+                                  updateModelPosition(model.id, newPos);
+                                  setViewportModels(prev => {
+                                    const updated = { ...prev };
+                                    Object.keys(updated).forEach(key => {
+                                      const vidx = parseInt(key);
+                                      updated[vidx] = updated[vidx].map(m => m.id === model.id ? { ...m, position: newPos } : m);
+                                    });
+                                    return updated;
+                                  });
+                                }}
+                                className="flex-1 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-m3dz-green"
+                              />
+                              <input
+                                type="number"
+                                value={model.position[idx].toFixed(1)}
+                                onChange={(e) => {
+                                  const val = parseFloat(e.target.value) || 0;
+                                  const newPos = [...model.position] as [number, number, number];
+                                  newPos[idx] = Math.max(-50, Math.min(50, val));
+                                  updateModelPosition(model.id, newPos);
+                                  setViewportModels(prev => {
+                                    const updated = { ...prev };
+                                    Object.keys(updated).forEach(key => {
+                                      const vidx = parseInt(key);
+                                      updated[vidx] = updated[vidx].map(m => m.id === model.id ? { ...m, position: newPos } : m);
+                                    });
+                                    return updated;
+                                  });
+                                }}
+                                className="w-12 text-[9px] text-gray-300 bg-gray-900 border border-gray-600 rounded px-1 py-0.5 text-right focus:border-m3dz-green focus:outline-none"
+                              />
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Rotation */}
+                        <div>
+                          <div className="text-[10px] text-m3dz-light font-bold mb-1">Rotation</div>
+                          {['X', 'Y', 'Z'].map((axis, idx) => (
+                            <div key={axis} className="flex items-center gap-2 mb-1">
+                              <span className="text-[9px] text-gray-500 w-3">{axis}</span>
+                              <input
+                                type="range"
+                                min="-3.14"
+                                max="3.14"
+                                step="0.01"
+                                value={model.rotation[idx]}
+                                onChange={(e) => {
+                                  const newRot = [...model.rotation] as [number, number, number];
+                                  newRot[idx] = parseFloat(e.target.value);
+                                  updateModelRotation(model.id, newRot);
+                                  setViewportModels(prev => {
+                                    const updated = { ...prev };
+                                    Object.keys(updated).forEach(key => {
+                                      const vidx = parseInt(key);
+                                      updated[vidx] = updated[vidx].map(m => m.id === model.id ? { ...m, rotation: newRot } : m);
+                                    });
+                                    return updated;
+                                  });
+                                }}
+                                className="flex-1 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-m3dz-green"
+                              />
+                              <input
+                                type="number"
+                                value={(model.rotation[idx] * 180 / Math.PI).toFixed(0)}
+                                onChange={(e) => {
+                                  const degrees = parseFloat(e.target.value) || 0;
+                                  const radians = (degrees * Math.PI) / 180;
+                                  const newRot = [...model.rotation] as [number, number, number];
+                                  newRot[idx] = Math.max(-3.14, Math.min(3.14, radians));
+                                  updateModelRotation(model.id, newRot);
+                                  setViewportModels(prev => {
+                                    const updated = { ...prev };
+                                    Object.keys(updated).forEach(key => {
+                                      const vidx = parseInt(key);
+                                      updated[vidx] = updated[vidx].map(m => m.id === model.id ? { ...m, rotation: newRot } : m);
+                                    });
+                                    return updated;
+                                  });
+                                }}
+                                className="w-12 text-[9px] text-gray-300 bg-gray-900 border border-gray-600 rounded px-1 py-0.5 text-right focus:border-m3dz-green focus:outline-none"
+                              />
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Scale (Uniform) */}
+                        <div>
+                          <div className="text-[10px] text-m3dz-light font-bold mb-1">Scale (Uniform)</div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[9px] text-gray-500 w-3">XYZ</span>
+                            <input
+                              type="range"
+                              min="0.1"
+                              max="50"
+                              step="0.1"
+                              value={model.scale[0]} // Use first value as representative
+                              onChange={(e) => {
+                                const uniformScale = parseFloat(e.target.value);
+                                const newScale: [number, number, number] = [uniformScale, uniformScale, uniformScale];
+                                updateModelScale(model.id, newScale);
+                                setViewportModels(prev => {
+                                  const updated = { ...prev };
+                                  Object.keys(updated).forEach(key => {
+                                    const vidx = parseInt(key);
+                                    updated[vidx] = updated[vidx].map(m => m.id === model.id ? { ...m, scale: newScale } : m);
+                                  });
+                                  return updated;
+                                });
+                              }}
+                              className="flex-1 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-m3dz-green"
+                            />
+                            <input
+                              type="number"
+                              value={model.scale[0].toFixed(1)}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value) || 0.1;
+                                const uniformScale = Math.max(0.1, Math.min(50, val));
+                                const newScale: [number, number, number] = [uniformScale, uniformScale, uniformScale];
+                                updateModelScale(model.id, newScale);
+                                setViewportModels(prev => {
+                                  const updated = { ...prev };
+                                  Object.keys(updated).forEach(key => {
+                                    const vidx = parseInt(key);
+                                    updated[vidx] = updated[vidx].map(m => m.id === model.id ? { ...m, scale: newScale } : m);
+                                  });
+                                  return updated;
+                                });
+                              }}
+                              className="w-12 text-[9px] text-gray-300 bg-gray-900 border border-gray-600 rounded px-1 py-0.5 text-right focus:border-m3dz-green focus:outline-none"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Reset Button */}
+                        <button
+                          onClick={() => {
+                            const defaultRotation = model.type === 'splat' ? [3.14159, 0, 0] : [0, 0, 0];
+                            updateModelPosition(model.id, [0, 0, 0]);
+                            updateModelRotation(model.id, defaultRotation);
+                            updateModelScale(model.id, model.type === 'splat' ? [10, 10, 10] : [1, 1, 1]);
+                            setViewportModels(prev => {
+                              const updated = { ...prev };
+                              Object.keys(updated).forEach(key => {
+                                const vidx = parseInt(key);
+                                updated[vidx] = updated[vidx].map(m => m.id === model.id ? { 
+                                  ...m, 
+                                  position: [0, 0, 0], 
+                                  rotation: defaultRotation, 
+                                  scale: model.type === 'splat' ? [10, 10, 10] : [1, 1, 1] 
+                                } : m);
+                              });
+                              return updated;
+                            });
+                          }}
+                          className="w-full text-[10px] bg-gray-700 hover:bg-gray-600 text-gray-300 py-1 rounded"
+                        >
+                          Reset Transform
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  <input
-                    type="range" min="0" max="1" step="0.01" value={model.opacity}
-                    onClick={(e) => e.stopPropagation()}
-                    onChange={(e) => {
-                      const newOpacity = parseFloat(e.target.value);
-                      updateModelOpacity(model.id, newOpacity);
-                      setViewportModels(prev => {
-                        const updated = { ...prev };
-                        Object.keys(updated).forEach(key => {
-                          const idx = parseInt(key);
-                          updated[idx] = updated[idx].map(m => m.id === model.id ? { ...m, opacity: newOpacity } : m);
-                        });
-                        return updated;
-                      });
-                    }}
-                    className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-m3dz-green"
-                  />
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </aside>

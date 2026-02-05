@@ -17,6 +17,9 @@ export interface ModelData {
   name: string;
   opacity: number;
   visible: boolean;
+  position: [number, number, number];
+  rotation: [number, number, number]; // Euler angles in radians
+  scale: [number, number, number];
 }
 
 export interface Study {

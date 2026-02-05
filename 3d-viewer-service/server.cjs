@@ -2,9 +2,11 @@ const express = require('express');
 const cors = require('cors');
 const fs = require('fs-extra');
 const path = require('path');
+const os = require('os');
 
 const app = express();
 const PORT = 3001;
+const HOST = '0.0.0.0'; // Listen on all network interfaces
 const SAMPLES_DIR = path.join(__dirname, 'samples');
 
 app.use(cors());
@@ -73,19 +75,43 @@ app.get('/api/studies/:id', async (req, res) => {
       return res.status(404).json({ error: 'Study not found' });
     }
 
+    // Get the host from the request to generate proper URLs for network access
+    const protocol = req.protocol || 'http';
+    const host = req.get('host') || `localhost:${PORT}`;
+    const baseUrl = `${protocol}://${host}`;
+
     const files = await fs.readdir(studyPath);
     const models = files.filter(f => 
       f.toLowerCase().endsWith('.stl') || 
       f.toLowerCase().endsWith('.ply') || 
-      f.toLowerCase().endsWith('.splat')
-    ).map(f => ({
-      id: f,
-      name: f,
-      url: `http://localhost:${PORT}/samples/${studyId}/${f}`,
-      type: f.toLowerCase().endsWith('.stl') ? 'stl' : f.toLowerCase().endsWith('.ply') ? 'ply' : 'splat',
-      opacity: 1,
-      visible: true
-    }));
+      f.toLowerCase().endsWith('.splat') ||
+      f.toLowerCase().endsWith('.ksplat')
+    ).map(f => {
+      const lower = f.toLowerCase();
+      let type = 'ply';
+      
+      if (lower.endsWith('.stl')) {
+        type = 'stl';
+      } else if (lower.endsWith('.splat') || lower.endsWith('.ksplat')) {
+        // .splat and .ksplat files are always Gaussian Splats
+        type = 'splat';
+      } else if (lower.endsWith('.ply')) {
+        // .ply files are regular meshes or point clouds (NOT Gaussian Splats)
+        type = 'ply';
+      }
+      
+      return {
+        id: f,
+        name: f,
+        url: `${baseUrl}/samples/${studyId}/${f}`,
+        type,
+        opacity: 1,
+        visible: true,
+        position: [0, 0, 0],
+        rotation: type === 'splat' ? [3.14159, 0, 0] : [0, 0, 0], // Splats rotated 180° on X axis
+        scale: type === 'splat' ? [10, 10, 10] : [1, 1, 1] // Splats start at 10x scale
+      };
+    });
 
     // Load all annotations from the annotations/ folder
     const annotationsDir = path.join(studyPath, 'annotations');
@@ -153,6 +179,23 @@ app.post('/api/studies/:id/videos', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Study API running at http://localhost:${PORT}`);
+app.listen(PORT, HOST, () => {
+  // Get local IP address
+  const networkInterfaces = os.networkInterfaces();
+  let localIP = 'localhost';
+  
+  for (const interfaceName in networkInterfaces) {
+    const interfaces = networkInterfaces[interfaceName];
+    for (const iface of interfaces) {
+      // Skip internal and non-IPv4 addresses
+      if (iface.family === 'IPv4' && !iface.internal) {
+        localIP = iface.address;
+        break;
+      }
+    }
+  }
+  
+  console.log(`\n🚀 Study API running:`);
+  console.log(`   Local:   http://localhost:${PORT}`);
+  console.log(`   Network: http://${localIP}:${PORT}\n`);
 });

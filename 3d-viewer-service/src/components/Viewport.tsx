@@ -27,25 +27,100 @@ const Model: React.FC<ModelProps> = ({ model, onDoubleClick }) => {
     model.url
   );
 
+  // Log geometry info for debugging
+  useEffect(() => {
+    if (geometry) {
+      const vertexCount = geometry.attributes.position?.count || 0;
+      const hasIndex = geometry.index !== null;
+      const faceCount = hasIndex ? (geometry.index?.count || 0) / 3 : 0;
+      
+      console.log(`📦 Loaded ${model.name}:`, {
+        vertices: vertexCount,
+        faces: faceCount,
+        hasColors: !!geometry.attributes.color,
+        boundingBox: geometry.boundingBox,
+        isIndexed: hasIndex
+      });
+      
+      if (!geometry.boundingBox) {
+        geometry.computeBoundingBox();
+        console.log('📐 Computed bounding box:', geometry.boundingBox);
+      }
+    }
+  }, [geometry, model.name]);
+
+  // Check if PLY is a point cloud (no faces/indices)
+  const isPointCloud = model.type === 'ply' && (!geometry.index || geometry.index.count === 0);
+
   const material = useMemo(() => {
-    const hasVertexColors = model.type === 'ply';
-    return new THREE.MeshStandardMaterial({
-      color: 0xffffff,
-      transparent: true,
-      opacity: model.opacity,
-      vertexColors: hasVertexColors,
-      side: THREE.DoubleSide,
-      roughness: 1.0,
-      metalness: 0.0,
-      flatShading: false,
-    });
-  }, [model.opacity, model.type]);
+    const hasVertexColors = model.type === 'ply' && geometry.attributes.color !== undefined;
+    
+    if (isPointCloud) {
+      console.log(`🎨 Rendering ${model.name} as point cloud with ${geometry.attributes.position.count} points`);
+      
+      const pointMaterial = new THREE.PointsMaterial({
+        size: 3.0, // Increased size for better visibility
+        transparent: true,
+        opacity: model.opacity,
+        sizeAttenuation: true,
+      });
+      
+      // Only set vertexColors if the geometry actually has color attribute
+      if (hasVertexColors) {
+        pointMaterial.vertexColors = true;
+      } else {
+        // Use a nice teal color for points without vertex colors
+        pointMaterial.color = new THREE.Color('#5ce6ac'); // M3DZ theme color
+      }
+      
+      return pointMaterial;
+    } else {
+      console.log(`🎨 Rendering ${model.name} as mesh`);
+      
+      const meshMaterial = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: model.opacity,
+        side: THREE.DoubleSide,
+        roughness: 1.0,
+        metalness: 0.0,
+        flatShading: false,
+      });
+      
+      // Only set vertexColors if the geometry actually has color attribute
+      if (hasVertexColors) {
+        meshMaterial.vertexColors = true;
+      }
+      
+      return meshMaterial;
+    }
+  }, [model.opacity, model.type, isPointCloud, geometry, model.name]);
+
+  if (isPointCloud) {
+    return (
+      <points 
+        geometry={geometry} 
+        material={material as THREE.PointsMaterial}
+        visible={model.visible}
+        position={model.position}
+        rotation={model.rotation}
+        scale={model.scale}
+        onDoubleClick={(e) => {
+          e.stopPropagation();
+          onDoubleClick([e.point.x, e.point.y, e.point.z], model.id, model.name);
+        }}
+      />
+    );
+  }
 
   return (
     <mesh 
       geometry={geometry} 
-      material={material} 
+      material={material as THREE.MeshStandardMaterial}
       visible={model.visible}
+      position={model.position}
+      rotation={model.rotation}
+      scale={model.scale}
       onDoubleClick={(e) => {
         e.stopPropagation();
         onDoubleClick([e.point.x, e.point.y, e.point.z], model.id, model.name);
@@ -55,39 +130,155 @@ const Model: React.FC<ModelProps> = ({ model, onDoubleClick }) => {
 };
 
 const SplatModel: React.FC<{ model: ModelData }> = ({ model }) => {
-  const { scene, camera, gl } = useThree();
-  const viewerRef = useRef<any>(null);
+  const { scene } = useThree();
+  const dropInViewerRef = useRef<any>(null);
+  const isLoadingRef = useRef(false);
 
   useEffect(() => {
-    let viewer: any = null;
-    
-    try {
-      viewer = new GaussianSplats3D.Viewer({
-        selfContained: false,
-        useBuiltInControls: false,
-        rootElement: gl.domElement.parentElement!,
-        renderer: gl,
-        camera: camera as THREE.PerspectiveCamera,
-        scene: scene,
-        ignoreDevicePixelRatio: false,
-      });
-
-      viewer.addSplatScene(model.url, {
-        progressiveLoad: true,
-        showLoadingUI: false
-      }).then(() => {
-        viewerRef.current = viewer;
-      });
-    } catch (err) {
-      console.error("Error initializing SPLAT viewer:", err);
+    // Prevent multiple simultaneous loads
+    if (isLoadingRef.current) {
+      console.log('⚠️ [SPLAT] Already loading, skipping...');
+      return;
     }
 
-    return () => {
-      if (viewer) {
-        // Splat viewer cleanup
+    let viewer: any = null;
+    let isMounted = true;
+    isLoadingRef.current = true;
+    
+    console.log('✨ [SPLAT] Starting to load:', model.name);
+    console.log('✨ [SPLAT] URL:', model.url);
+    
+    const initViewer = async () => {
+      try {
+        // Determine format from file extension
+        const lower = model.name.toLowerCase();
+        let format = GaussianSplats3D.SceneFormat.Splat;
+        if (lower.endsWith('.ksplat')) {
+          format = GaussianSplats3D.SceneFormat.KSplat;
+        } else if (lower.endsWith('.ply')) {
+          format = GaussianSplats3D.SceneFormat.Ply;
+        }
+        
+        console.log('✨ [SPLAT] Format detected:', format === GaussianSplats3D.SceneFormat.KSplat ? 'KSplat' : 
+                                           format === GaussianSplats3D.SceneFormat.Ply ? 'Ply' : 'Splat');
+        
+        console.log('✨ [SPLAT] Creating DropInViewer...');
+        
+        // Create DropInViewer with settings that work
+        viewer = new GaussianSplats3D.DropInViewer({
+          'gpuAcceleratedSort': false, // Disable to avoid issues
+          'sharedMemoryForWorkers': false,
+          'integerBasedSort': false,
+          'halfPrecisionCovariancesOnGPU': false,
+          'sphericalHarmonicsDegree': 0, // Start with basic
+          'enableSIMDInSort': false,
+          'focalAdjustment': 1.0,
+          'antialiased': false,
+          'dynamicScene': false,
+        });
+
+        dropInViewerRef.current = viewer;
+        console.log('✨ [SPLAT] DropInViewer created');
+
+        if (!isMounted) {
+          console.log('⚠️ [SPLAT] Component unmounted before load, aborting');
+          return;
+        }
+
+        console.log('✨ [SPLAT] Loading splat scene from URL...');
+        
+        // Add the splat scene with model transforms
+        const result = await viewer.addSplatScene(model.url, {
+          'progressiveLoad': false, // Disable progressive load
+          'showLoadingUI': false,
+          'splatAlphaRemovalThreshold': 5,
+          'position': model.position || [0, 0, 0],
+          'rotation': [0, 0, 0, 1], // Rotation will be applied to the viewer object
+          'scale': model.scale || [2, 2, 2],
+          'format': format,
+        });
+
+        console.log('✨ [SPLAT] addSplatScene completed, result:', result);
+
+        console.log('✨ [SPLAT] Adding viewer to scene...');
+        scene.add(viewer);
+        
+        // Apply rotation from model (rotation is Euler angles in radians)
+        if (model.rotation) {
+          viewer.rotation.set(model.rotation[0], model.rotation[1], model.rotation[2]);
+        }
+        
+        const splatCount = viewer.getSplatCount?.() || 0;
+        console.log(`✅ [SPLAT] SUCCESS! Loaded: ${model.name} (${splatCount.toLocaleString()} splats)`);
+        console.log('✅ [SPLAT] Viewer visible:', viewer.visible);
+        console.log('✅ [SPLAT] Scene children count:', scene.children.length);
+
+      } catch (err) {
+        console.error('❌ [SPLAT] Error loading Gaussian Splat:', model.name);
+        console.error('❌ [SPLAT] Error:', err);
+      } finally {
+        isLoadingRef.current = false;
       }
     };
-  }, [model.url, scene, camera, gl]);
+
+    initViewer();
+
+    return () => {
+      console.log('🧹 [SPLAT] Cleanup triggered for:', model.name);
+      isMounted = false;
+      if (dropInViewerRef.current) {
+        console.log('🧹 [SPLAT] Removing viewer from scene');
+        scene.remove(dropInViewerRef.current);
+        try {
+          dropInViewerRef.current.dispose();
+        } catch (e) {
+          console.warn('⚠️ [SPLAT] Error disposing:', e);
+        }
+        dropInViewerRef.current = null;
+      }
+      isLoadingRef.current = false;
+    };
+  }, [model.url, scene, model.name]);
+
+  // Handle visibility changes
+  useEffect(() => {
+    if (dropInViewerRef.current) {
+      dropInViewerRef.current.visible = model.visible;
+    }
+  }, [model.visible]);
+
+  // Handle opacity changes
+  useEffect(() => {
+    if (dropInViewerRef.current) {
+      dropInViewerRef.current.traverse((child: any) => {
+        if (child.material) {
+          child.material.opacity = model.opacity;
+          child.material.transparent = model.opacity < 1;
+        }
+      });
+    }
+  }, [model.opacity]);
+
+  // Handle position changes
+  useEffect(() => {
+    if (dropInViewerRef.current && model.position) {
+      dropInViewerRef.current.position.set(model.position[0], model.position[1], model.position[2]);
+    }
+  }, [model.position]);
+
+  // Handle rotation changes
+  useEffect(() => {
+    if (dropInViewerRef.current && model.rotation) {
+      dropInViewerRef.current.rotation.set(model.rotation[0], model.rotation[1], model.rotation[2]);
+    }
+  }, [model.rotation]);
+
+  // Handle scale changes
+  useEffect(() => {
+    if (dropInViewerRef.current && model.scale) {
+      dropInViewerRef.current.scale.set(model.scale[0], model.scale[1], model.scale[2]);
+    }
+  }, [model.scale]);
 
   return null;
 };
@@ -244,7 +435,7 @@ export const Viewport: React.FC<ViewportProps> = ({
         <ambientLight intensity={1.0} />
         <directionalLight position={[5, 5, 5]} intensity={1.73} castShadow />
         <directionalLight position={[-5, 5, -5]} intensity={0.86} />
-        <pointLight position={[0, -5, 0]} intensity={0.72} color="#m3dz-light" />
+        <pointLight position={[0, -5, 0]} intensity={0.72} color="#5ce6ac" />
         
         <Suspense fallback={<Loader />}>
           {models.filter(m => m.visible).map((model) => (
